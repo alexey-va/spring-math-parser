@@ -28,14 +28,20 @@ public class ExpressionParserModel {
 
     public Optional<String> parseExpression(String expression) {
         try {
-            if (!validateBrackets(expression)) expression = repairBrackets(expression);
-            //System.out.println(!validateBrackets(expression) + " " + expression);
+            // Fix possible mistakes in expression such as:
+            // sin(pi/2 - not closed brackets
+            // 1 + 2 + 3 - spaces
+            // 10(1+2) or (1+2)(2+3) - reduced * sign before brackets
+            expression = repairBrackets(expression);
             expression = removeSpaces(expression);
             expression = repairReducedMultiplication(expression);
-            return Optional.of(tokenManager.simplifyToken(new Token(expression, Token.Type.COMPLEX)).getString());
+
+            Token wrappedExpression = new Token(expression, Token.Type.COMPLEX);
+            return Optional.of(
+                    tokenManager.simplifyToken(wrappedExpression).getString()
+            );
         } catch (CannotParseExpressionException exception) {
             System.out.println(exception.getMessage());
-            exception.printStackTrace();
             return Optional.empty();
         }
     }
@@ -46,7 +52,9 @@ public class ExpressionParserModel {
     }
 
     private String repairBrackets(String expression) throws CannotParseExpressionException {
-        return ExpUtil.fixBrackets(expression);
+        if (!validateBrackets(expression))
+            return ExpUtil.fixBrackets(expression);
+        return expression;
     }
 
     private String repairReducedMultiplication(String expression) {

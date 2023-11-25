@@ -20,6 +20,12 @@ public class TokenManager {
     }
 
 
+    /**
+     * @param expression expression, represented as a Token wrapper
+     * @return list of subtokens, which may contain value tokens, operator tokens
+     * and complex tokens
+     * @throws CannotParseExpressionException
+     */
     public List<Token> tokenize(Token expression) throws CannotParseExpressionException {
         List<Token> result = new ArrayList<>();
         Deque<Character> bracketStack = new ArrayDeque<>();
@@ -28,14 +34,12 @@ public class TokenManager {
 
         for (int i = 0; i < expression.getString().length(); i++) {
             char c = expression.getString().charAt(i);
-            //System.out.println("Char " + c + " op: " + ExpUtil.isOperatorTokenCharacter(c));
 
             boolean addToToken = !bracketStack.isEmpty() || isValueCharacter(c) || (isBracket(c));
 
-            // add to value string builder
+            // add to value string builder & if inside bracket - mark as a complex token
             if (addToToken) {
                 valueTokenBuilder.append(c);
-                //System.out.println("appending: "+c);
                 if (!bracketStack.isEmpty()) complex = true;
             }
 
@@ -45,18 +49,22 @@ public class TokenManager {
                 valueTokenBuilder = new StringBuilder();
             }
 
-            // do some bracket counting
-            if (isOpeningBracket(c)) {
-                bracketStack.push(c);
-            } else if (isClosingBracket(c)) {
-                if (bracketStack.isEmpty() || bracketStack.pop() != getOppositeBracket(c))
-                    throw new CannotParseExpressionException("Bracket mismatch at index " + i);
-            }
-            // get operator full substring (it can be multiple chars long like //)
+            // Do bracket counting
+            if (isOpeningBracket(c)) bracketStack.push(c);
+            else if (isClosingBracket(c) && (bracketStack.isEmpty() || bracketStack.pop() != getOppositeBracket(c)))
+                throw new CannotParseExpressionException("Incorrent amount of brackets on tokenize stage. This should not happen!");
+
+                // get operator full substring (it can be multiple chars long like //)
             else if (!addToToken && isOperatorTokenCharacter(c)) {
                 Optional<String> fullToken = getOperatorToken(expression.getString(), i);
-                //System.out.println("Full token: " + fullToken + " from " + i + " " + c);
                 if (fullToken.isEmpty()) throw new CannotParseExpressionException("Operator " + c + " is not found!");
+
+                Token operator = new Token(fullToken.get(), Token.Type.OPERATOR);
+
+                // Check for missing value of postfix operators like factorial "!"
+                if (arithmeticProvider.isPostfixOperator(operator) && (result.isEmpty() || result.get(result.size() - 1).type == Token.Type.OPERATOR))
+                    throw new CannotParseExpressionException("No value for unary postfix operator!");
+
                 result.add(new Token(fullToken.get(), Token.Type.OPERATOR));
                 i += fullToken.get().length() - 1;
             }
@@ -65,23 +73,37 @@ public class TokenManager {
     }
 
 
-    public Optional<String> getOperatorToken(String exp, int tokenStartIndex) {
+    /**
+     * @param expression
+     * @param operatorStart index of the first char of operator
+     * @return Optinal which contains operator token if it matches
+     * any from ArithmeticProvider
+     */
+    public Optional<String> getOperatorToken(String expression, int operatorStart) {
         StringBuilder operatorString = new StringBuilder();
-        for (int i = tokenStartIndex; i < exp.length(); i++) {
-            char c = exp.charAt(i);
+        for (int i = operatorStart; i < expression.length(); i++) {
+            char c = expression.charAt(i);
             if (!isOperatorTokenCharacter(c)) break;
             operatorString.append(c);
         }
 
         operatorString.reverse();
 
-        while (!arithmeticProvider.isOperatorName(operatorString.toString())
-                && !operatorString.isEmpty()) operatorString.deleteCharAt(0);
+        while (!arithmeticProvider.isOperatorName(operatorString.toString()) && !operatorString.isEmpty())
+            operatorString.deleteCharAt(0);
+
         return !operatorString.isEmpty() ? Optional.of(operatorString.toString()) : Optional.empty();
     }
 
+
+    /**
+     * Recursive method which turns complex expressions into a simple value
+     *
+     * @param token wrapped math expression
+     * @return parsed value wrapped in Token
+     * @throws CannotParseExpressionException when any mistake in expression is found
+     */
     public Token simplifyToken(Token token) throws CannotParseExpressionException {
-        //System.out.println(token);
         if (token.getType() != Token.Type.COMPLEX) return token;
 
         // If token is a function (e.g. sin(...))
@@ -93,78 +115,55 @@ public class TokenManager {
 
         List<Token> subTokens = tokenize(token);
         List<Token> simplifiedTokens = new ArrayList<>();
-        for (Token t : subTokens) {
-            Token simplified = t.type == Token.Type.COMPLEX ? simplifyToken(t) : t;
-            //System.out.println(simplified);
-            simplifiedTokens.add(simplified);
-        }
-        Token result = shuntingYard(simplifiedTokens);
+        for (Token t : subTokens) simplifiedTokens.add(t.type == Token.Type.COMPLEX ? simplifyToken(t) : t);
+
+        Token result = applyOperatorsInOrder(simplifiedTokens);
+
         if (result.getType() != Token.Type.VALUE)
-            throw new CannotParseExpressionException("Could not parse token: " + token);
-        //System.out.println(result+" "+result.getType());
+            throw new CannotParseExpressionException("Result is not a number! Wrong input expression");
+
         return result;
     }
 
 
-    private Token shuntingYard(List<Token> simplifiedTokenList) throws CannotParseExpressionException {
-        //System.out.println("sy: "+simplifiedTokenList);
-        Deque<Token> numbers = new ArrayDeque<>();
-        Deque<Token> operators = new ArrayDeque<>();
+    /**
+     * @param simplifiedTokenList list of numbers and operators wrapped in Token
+     * @return resulting value wrapped in Token
+     * @throws CannotParseExpressionException
+     */
+    private Token applyOperatorsInOrder(List<Token> simplifiedTokenList) throws CannotParseExpressionException {
+        List<Integer> operatorPriorities = simplifiedTokenList.stream()
+                .filter(t -> arithmeticProvider.isOperatorName(t.getString()))
+                .map(arithmeticProvider::getOperatorPriority)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .toList();
 
-        for (Token currentToken : simplifiedTokenList) {
-            System.out.println(currentToken+" "+currentToken.getType());
-            if (currentToken.type == Token.Type.VALUE) {
-                numbers.push(currentToken);
-                continue;
-            }
-
-            if (!operators.isEmpty()) {
-                Token previousOperator = operators.peek();
-
-                int previousOperatorPriority = arithmeticProvider.getOperatorPriority(previousOperator);
-                int currentOperatorPriority = arithmeticProvider.getOperatorPriority(currentToken);
-
-                // Do operation with previous operator cuz current is lower priority
-                if (currentOperatorPriority < previousOperatorPriority) {
-                    if(arithmeticProvider.isBinaryOperator(previousOperator)) {
-                        Token num2 = numbers.pop();
-                        Token num1 = numbers.pop();
-                        Token operator = operators.pop();
-                        Token result = arithmeticProvider.applyFunction(operator, List.of(num1, num2));
-                        numbers.push(result);
-                    } else if(arithmeticProvider.isPostfixOperator(previousOperator) ||
-                            arithmeticProvider.isPrefixOperator(previousOperator)){
-                        Token num = numbers.pop();
-                        Token operator = operators.pop();
-                        Token result = arithmeticProvider.applyFunction(operator, List.of(num));
-                        numbers.push(result);
-                    }
+        for (int priority : operatorPriorities) {
+            int i = 0;
+            while (i < simplifiedTokenList.size()) {
+                Token t = simplifiedTokenList.get(i);
+                if (t.type != Token.Type.OPERATOR || arithmeticProvider.getOperatorPriority(t) != priority)
+                    i++;
+                else if (arithmeticProvider.isBinaryOperator(t)) {
+                    Token num1 = simplifiedTokenList.remove(i - 1);
+                    Token num2 = simplifiedTokenList.remove(i);
+                    simplifiedTokenList.remove(t);
+                    simplifiedTokenList.add(i - 1, arithmeticProvider.applyFunction(t, List.of(num1, num2)));
+                } else if (arithmeticProvider.isPrefixOperator(t)) {
+                    Token num = simplifiedTokenList.remove(i + 1);
+                    simplifiedTokenList.remove(t);
+                    simplifiedTokenList.add(i, arithmeticProvider.applyFunction(t, List.of(num)));
+                    i++;
+                } else if (arithmeticProvider.isPostfixOperator(t)) {
+                    Token num = simplifiedTokenList.remove(i - 1);
+                    simplifiedTokenList.remove(t);
+                    simplifiedTokenList.add(i - 1, arithmeticProvider.applyFunction(t, List.of(num)));
                 }
             }
-            operators.push(currentToken);
         }
 
-        //System.out.println(numbers+" "+operators);
-        while (numbers.size() > 1 || !operators.isEmpty()) {
-
-            Token operator = operators.pollFirst();
-            if(arithmeticProvider.isBinaryOperator(operator)) {
-                Token num2 = numbers.pollFirst();
-                Token num1 = numbers.pollFirst();
-                Token result = arithmeticProvider.applyFunction(operator, List.of(num1, num2));
-                //System.out.println("res:"+result+" "+num1+" "+num2);
-                numbers.addFirst(result);
-                //System.out.println("numbers: "+numbers);
-            } else if(arithmeticProvider.isPostfixOperator(operator) ||
-                    arithmeticProvider.isPrefixOperator(operator)){
-                Token num = numbers.pollFirst();
-                Token result = arithmeticProvider.applyFunction(operator, List.of(num));
-                //System.out.println("res:"+result);
-                numbers.addFirst(result);
-            }
-        }
-
-        return numbers.pop();
+        return simplifiedTokenList.get(0);
     }
 
 

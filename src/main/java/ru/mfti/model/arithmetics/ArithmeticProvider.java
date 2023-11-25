@@ -26,10 +26,12 @@ public abstract class ArithmeticProvider {
     }
 
     public boolean isBinaryOperator(Token operator) {
+        if (!functionMap.containsKey(operator.getString())) return false;
         return functionMap.get(operator.getString()) instanceof BinaryOperator;
     }
 
     public boolean isUnaryOperator(Token operator) {
+        if (!functionMap.containsKey(operator.getString())) return false;
         return functionMap.get(operator.getString()) instanceof UnaryOperator;
     }
 
@@ -51,14 +53,10 @@ public abstract class ArithmeticProvider {
     public void addFunction(CalcFunction function) {
         Set<String> aliases = new HashSet<>(function.getAliases());
         aliases.add(function.getName());
-        aliases.stream().filter(functionMap::containsKey)
-                .findAny()
-                .ifPresentOrElse(s -> System.out.println(s + " is already taken by function " + functionMap.get(s)),
-                        () -> aliases.forEach(a -> functionMap.put(a, function)));
+        aliases.stream().filter(functionMap::containsKey).findAny().ifPresentOrElse(s -> System.out.println(s + " is already taken by function " + functionMap.get(s)), () -> aliases.forEach(a -> functionMap.put(a, function)));
     }
 
     public Token applyFunction(Token token, List<Token> args) throws CannotParseExpressionException {
-        System.out.println(token+" "+args);
         if (token.type == Token.Type.COMPLEX) {
             String functionName = token.getEnvelopingFunction();
             if (functionName.isEmpty()) System.out.println("Funcition name is empty!");
@@ -68,15 +66,11 @@ public abstract class ArithmeticProvider {
             if (leadingNumber.isEmpty() && functionName.startsWith("-")) leadingNumber = Optional.of("-1");
             if (leadingNumber.isEmpty() && functionName.startsWith("+")) leadingNumber = Optional.of("1");
             if (leadingNumber.isPresent()) functionName = functionName.substring(leadingNumber.get().length());
-            //System.out.println("Leading: " + leadingNumber + " name: " + functionName);
-
-            System.out.println("num:" + leadingNumber + " " + functionName + " " + args);
 
             CalcFunction function = functionMap.get(functionName);
 
-            System.out.println("f: "+function+" lead:"+leadingNumber+" args:"+args);
             if (function == null && args.size() == 1) {
-                if(leadingNumber.isEmpty()) leadingNumber = Optional.of(token.getEnvelopingFunction());
+                if (leadingNumber.isEmpty()) leadingNumber = Optional.of(token.getEnvelopingFunction());
                 return multiply(new Token(leadingNumber.get(), Token.Type.VALUE), args.get(0));
             }
 
@@ -86,14 +80,12 @@ public abstract class ArithmeticProvider {
 
             // claculate result and multiply by leading value if present
             Token result = function.compute(args);
-            if (leadingNumber.isPresent())
-                result = multiply(result, new Token(leadingNumber.get(), Token.Type.VALUE));
+            if (leadingNumber.isPresent()) result = multiply(result, new Token(leadingNumber.get(), Token.Type.VALUE));
 
             return result;
 
         } else if (token.type == Token.Type.OPERATOR) {
             String operatorName = token.getString();
-            if (operatorName.isEmpty()) System.out.println("Operator name is empty!");
 
             CalcFunction function = functionMap.get(operatorName);
             if (function == null)

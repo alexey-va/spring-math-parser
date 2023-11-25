@@ -15,7 +15,7 @@ import java.util.Optional;
 
 //REST API
 @RestController
-class SummatorController {
+public class SummatorController {
 
     @Autowired
     ExpressionParserModel expressionParserModel;

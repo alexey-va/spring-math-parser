@@ -10,7 +10,7 @@ public class ConstantsUtil {
        put("pi", Math.PI);
        put("e", Math.E);
        put("π", Math.PI);
-       put("τ", Math.TAU);
+       put("τ", 2*Math.PI);
     }};
 
 

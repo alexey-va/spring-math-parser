@@ -12,30 +12,17 @@ public class Token {
 
 
     public final Type type;
-    private String string;
-    Token parent;
+    private final String string;
 
     // If token is a function:
     private String envelopingFunction;
     private List<Token> argumentTokens;
 
     public Token(String string, Type type) throws CannotParseExpressionException {
-        //System.out.println("nt: "+string);
         this.type = type;
         this.string = ExpUtil.trimBrackets(string);
-        //System.out.println("nb: "+this.string);
-        //System.out.println("created token: "+string+" "+type+" "+this.string);
         parseEnvelopingFunction();
-    }
-
-    public Token(String string, Type type, Token parent) throws CannotParseExpressionException {
-        this.type = type;
-        this.string = ExpUtil.trimBrackets(string)
-                .replaceFirst("^0+(?!$)", "")
-                .replaceFirst("^[+]+(?!$)", "");
-        this.parent = parent;
-        //System.out.println("created token: "+string+" "+type+" "+this.string);
-        parseEnvelopingFunction();
+        if(string.isEmpty()) throw new CannotParseExpressionException();
     }
 
     private void parseEnvelopingFunction() throws CannotParseExpressionException {
@@ -43,9 +30,8 @@ public class Token {
         if (function.isPresent()) {
             envelopingFunction = function.get();
             argumentTokens = splitArgumentTokens(ExpUtil.stripEnvelopingFunction(this.string));
-        } else if (this.string.contains(",")) {
-            throw new CannotParseExpressionException();
-        }
+        } else if (this.string.contains(","))
+            throw new CannotParseExpressionException("Misplaced ',' symbol encountered!");
     }
 
     private List<Token> splitArgumentTokens(String expInBrackets) throws CannotParseExpressionException {
@@ -63,20 +49,19 @@ public class Token {
             double multiplier = 1;
             String trimmedString = string;
 
-            // check for smth like 10pi
+            // check for leading number with reduced multiplication sign like 10pi
             Optional<String> leadingNumber = ExpUtil.getLongestNumberSubstring(string, 0);
             if (leadingNumber.isPresent() && leadingNumber.get().length() < string.length()) {
                 multiplier = Double.parseDouble(leadingNumber.get());
                 trimmedString = string.substring(leadingNumber.get().length());
             }
 
-            // check if it is a named constant
+            // Check for a chain of constants like (e, pi, epi)
             Optional<Double> optional = ConstantsUtil.parseConstants(trimmedString.toLowerCase());
 
             if (optional.isPresent()) return optional.get() * multiplier;
             return Double.parseDouble(trimmedString) * multiplier;
         } catch (Exception e) {
-            e.printStackTrace();
             throw new CannotParseExpressionException(this, "Cannot parse value '" + string + "' to a number!");
         }
     }
@@ -103,17 +88,9 @@ public class Token {
 
     }
 
-    public Token getParent() {
-        return parent;
-    }
-
     @Override
     public String toString() {
         return this.string;
-    }
-
-    public void setParent(Token token) {
-        this.parent = token;
     }
 
 
