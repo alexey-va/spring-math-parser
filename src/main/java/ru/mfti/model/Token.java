@@ -22,7 +22,7 @@ public class Token {
         this.type = type;
         this.string = ExpUtil.trimBrackets(string);
         parseEnvelopingFunction();
-        if(string.isEmpty()) throw new CannotParseExpressionException();
+        if (string.isEmpty()) throw new CannotParseExpressionException();
     }
 
     private void parseEnvelopingFunction() throws CannotParseExpressionException {
@@ -51,7 +51,7 @@ public class Token {
 
             // check for leading number with reduced multiplication sign like 10pi
             Optional<String> leadingNumber = ExpUtil.getLongestNumberSubstring(string, 0);
-            if (leadingNumber.isPresent() && leadingNumber.get().length() < string.length()) {
+            if (leadingNumber.isPresent() && leadingNumber.get().length() < string.length() && !trimmedString.matches("[0-9.]*E[0-9]*")) {
                 multiplier = Double.parseDouble(leadingNumber.get());
                 trimmedString = string.substring(leadingNumber.get().length());
             }
@@ -95,8 +95,6 @@ public class Token {
 
 
     public enum Type {
-        OPERATOR,
-        VALUE,
-        COMPLEX
+        OPERATOR, VALUE, COMPLEX
     }
 }

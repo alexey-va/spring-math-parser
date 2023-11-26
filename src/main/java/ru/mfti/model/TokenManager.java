@@ -6,6 +6,7 @@ import ru.mfti.model.arithmetics.ArithmeticProvider;
 import ru.mfti.model.exceptions.CannotParseExpressionException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static ru.mfti.model.util.ExpUtil.*;
 
@@ -24,9 +25,8 @@ public class TokenManager {
      * @param expression expression, represented as a Token wrapper
      * @return list of subtokens, which may contain value tokens, operator tokens
      * and complex tokens
-     * @throws CannotParseExpressionException
      */
-    public List<Token> tokenize(Token expression) throws CannotParseExpressionException {
+    public List<Token> tokenize(Token expression) {
         List<Token> result = new ArrayList<>();
         Deque<Character> bracketStack = new ArrayDeque<>();
         StringBuilder valueTokenBuilder = new StringBuilder();
@@ -74,7 +74,6 @@ public class TokenManager {
 
 
     /**
-     * @param expression
      * @param operatorStart index of the first char of operator
      * @return Optinal which contains operator token if it matches
      * any from ArithmeticProvider
@@ -107,36 +106,38 @@ public class TokenManager {
         if (token.getType() != Token.Type.COMPLEX) return token;
 
         // If token is a function (e.g. sin(...))
-        if (token.getEnvelopingFunction() != null) {
-            List<Token> simplifiedArguments = new ArrayList<>();
-            for (Token argToken : token.getArgumentTokens()) simplifiedArguments.add(simplifyToken(argToken));
-            return arithmeticProvider.applyFunction(token, simplifiedArguments);
-        }
+        if (token.getEnvelopingFunction() != null)
+            return arithmeticProvider.applyFunction(
+                    token,
+                    token.getArgumentTokens().stream()
+                            .map(this::simplifyToken)
+                            .toList()
+            );
 
-        List<Token> subTokens = tokenize(token);
-        List<Token> simplifiedTokens = new ArrayList<>();
-        for (Token t : subTokens) simplifiedTokens.add(t.type == Token.Type.COMPLEX ? simplifyToken(t) : t);
-
-        Token result = null;
+        // Recursively simplify all subtokens
+        List<Token> simplifiedTokens = tokenize(token).stream()
+                .map(this::simplifyToken)
+                .collect(Collectors.toList());
 
         // If any error is thrown - expression is invalid
         try {
-             result = applyOperatorsInOrder(simplifiedTokens);
-        } catch (Exception ignored){}
-
-        if (result == null || (result.getType() != Token.Type.VALUE))
-            throw new CannotParseExpressionException("Result is not a number! Wrong input expression");
-
-        return result;
+            Token result = applyOperatorsInOrder(simplifiedTokens);
+            //System.out.println("res: "+result);
+            if (result.getType() != Token.Type.VALUE)
+                throw new CannotParseExpressionException("Result is not a number! Wrong input expression");
+            return result;
+        } catch (Exception e){
+            //e.printStackTrace();
+            throw new CannotParseExpressionException("Operator order is incorrect!");
+        }
     }
 
 
     /**
      * @param simplifiedTokenList list of numbers and operators wrapped in Token
      * @return resulting value wrapped in Token
-     * @throws CannotParseExpressionException
      */
-    private Token applyOperatorsInOrder(List<Token> simplifiedTokenList) throws CannotParseExpressionException {
+    private Token applyOperatorsInOrder(List<Token> simplifiedTokenList) {
         List<Integer> operatorPriorities = simplifiedTokenList.stream()
                 .filter(t -> arithmeticProvider.isOperatorName(t.getString()))
                 .map(arithmeticProvider::getOperatorPriority)
@@ -153,6 +154,7 @@ public class TokenManager {
                 else if (arithmeticProvider.isBinaryOperator(t)) {
                     Token num1 = simplifiedTokenList.remove(i - 1);
                     Token num2 = simplifiedTokenList.remove(i);
+                    //System.out.println(num1+" "+t+" "+num2);
                     simplifiedTokenList.remove(t);
                     simplifiedTokenList.add(i - 1, arithmeticProvider.applyFunction(t, List.of(num1, num2)));
                 } else if (arithmeticProvider.isPrefixOperator(t)) {

@@ -2,10 +2,9 @@ package ru.mfti.model.exceptions;
 
 import ru.mfti.model.Token;
 
-public class CannotParseExpressionException extends Exception{
+public class CannotParseExpressionException extends RuntimeException{
 
     Token token;
-    String description;
 
     public CannotParseExpressionException(Token token, String message){
         super(message);

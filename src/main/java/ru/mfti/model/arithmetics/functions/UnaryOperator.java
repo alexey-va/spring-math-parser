@@ -1,16 +1,20 @@
 package ru.mfti.model.arithmetics.functions;
 
-import ru.mfti.model.Token;
+import ru.mfti.model.exceptions.CannotAddFunctionException;
+import ru.mfti.model.util.ExpUtil;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 public class UnaryOperator extends CalcFunction {
 
-    boolean postfix = true;
+    boolean postfix;
 
     protected UnaryOperator(Builder builder) {
         super(builder);
         this.postfix = builder.postfix;
+        if (!Stream.concat(Stream.of(name), getAliases().stream()).flatMap(s -> s.chars().boxed()).allMatch(c -> ExpUtil.isOperatorTokenCharacter((char) (c.intValue())))) {
+            throw new CannotAddFunctionException("Operator " + this.name + " has forbidden characters!");
+        }
     }
 
     public boolean isPostfix() {

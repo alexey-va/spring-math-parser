@@ -3,7 +3,6 @@ package ru.mfti.model.arithmetics;
 import ru.mfti.model.Token;
 import ru.mfti.model.arithmetics.functions.BinaryOperator;
 import ru.mfti.model.arithmetics.functions.CalcFunction;
-import ru.mfti.model.arithmetics.functions.Computable;
 import ru.mfti.model.arithmetics.functions.UnaryOperator;
 import ru.mfti.model.exceptions.CannotParseExpressionException;
 import ru.mfti.model.util.ExpUtil;
@@ -53,6 +52,7 @@ public abstract class ArithmeticProvider {
     public void addFunction(CalcFunction function) {
         Set<String> aliases = new HashSet<>(function.getAliases());
         aliases.add(function.getName());
+
         aliases.stream().filter(functionMap::containsKey).findAny().ifPresentOrElse(s -> System.out.println(s + " is already taken by function " + functionMap.get(s)), () -> aliases.forEach(a -> functionMap.put(a, function)));
     }
 

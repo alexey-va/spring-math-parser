@@ -1,9 +1,16 @@
 package ru.mfti;
 
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import ru.mfti.model.ExpressionParserModel;
+import ru.mfti.model.TokenManager;
+import ru.mfti.model.arithmetics.BasicArithmeticProvider;
+
 public class MyTests {
 
 
-/*    ExpressionParserModel model;
+    ExpressionParserModel model;
 
     @Before
     public void setup(){
@@ -23,6 +30,6 @@ public class MyTests {
         Assert.assertEquals(model.parseExpression("10*2/4*3+2").get(), "17");
         Assert.assertEquals(model.parseExpression("10*2/4*3+2*3").get(), "21");
         System.out.println(System.currentTimeMillis()-l1);
-    }*/
+    }
 
 }

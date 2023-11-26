@@ -1,15 +1,19 @@
 package ru.mfti.model.arithmetics.functions;
 
-import ru.mfti.model.Token;
+import ru.mfti.model.exceptions.CannotAddFunctionException;
+import ru.mfti.model.util.ExpUtil;
 
-import java.util.List;
+import java.util.stream.Stream;
 
-public class ArgsFunction extends CalcFunction{
+public class ArgsFunction extends CalcFunction {
 
 
-
-    protected ArgsFunction(Builder builder){
+    protected ArgsFunction(Builder builder) {
         super(builder);
+
+        if (Stream.concat(Stream.of(name), getAliases().stream()).flatMap(s -> s.chars().boxed()).anyMatch(c -> ExpUtil.isOperatorTokenCharacter((char) (c.intValue())))) {
+            throw new CannotAddFunctionException("Function " + this.name + " has forbidden characters!");
+        }
     }
 
 
@@ -17,12 +21,12 @@ public class ArgsFunction extends CalcFunction{
 
 
         @Override
-        public Builder me(){
+        public Builder me() {
             return this;
         }
 
         @Override
-        public ArgsFunction build(){
+        public ArgsFunction build() {
             return new ArgsFunction(this);
         }
 

@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import ru.mfti.model.exceptions.CannotParseExpressionException;
 import ru.mfti.model.util.ExpUtil;
 
-import java.util.List;
 import java.util.Optional;
 
 
@@ -18,11 +17,6 @@ public class ExpressionParserModel {
 
     @Autowired
     public ExpressionParserModel(TokenManager tokenManager) {
-        try {
-            repairReducedMultiplication("(1+2)(2+3)");
-        } catch (Exception e) {
-
-        }
         this.tokenManager = tokenManager;
     }
 
@@ -37,23 +31,22 @@ public class ExpressionParserModel {
             expression = repairReducedMultiplication(expression);
 
             Token wrappedExpression = new Token(expression, Token.Type.COMPLEX);
-            return Optional.of(
-                    tokenManager.simplifyToken(wrappedExpression).getString()
-            );
+            System.out.println(wrappedExpression);
+            return Optional.of(tokenManager.simplifyToken(wrappedExpression).getString());
         } catch (CannotParseExpressionException exception) {
             System.out.println(exception.getMessage());
+            exception.printStackTrace();
             return Optional.empty();
         }
     }
 
-    private boolean validateBrackets(String expression) throws CannotParseExpressionException {
+    private boolean validateBrackets(String expression) {
         Optional<Integer> bracketErrorIndex = ExpUtil.findBracketMismatch(expression);
         return bracketErrorIndex.isEmpty();
     }
 
     private String repairBrackets(String expression) throws CannotParseExpressionException {
-        if (!validateBrackets(expression))
-            return ExpUtil.fixBrackets(expression);
+        if (!validateBrackets(expression)) return ExpUtil.fixBrackets(expression);
         return expression;
     }
 

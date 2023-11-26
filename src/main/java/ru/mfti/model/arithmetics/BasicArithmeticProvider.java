@@ -2,9 +2,11 @@ package ru.mfti.model.arithmetics;
 
 import org.springframework.stereotype.Component;
 import ru.mfti.model.Token;
-import ru.mfti.model.arithmetics.functions.*;
+import ru.mfti.model.arithmetics.functions.ArgsFunction;
+import ru.mfti.model.arithmetics.functions.BinaryOperator;
+import ru.mfti.model.arithmetics.functions.UnaryOperator;
+import ru.mfti.model.exceptions.CannotAddFunctionException;
 import ru.mfti.model.exceptions.CannotParseExpressionException;
-import ru.mfti.model.util.ConstantsUtil;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -12,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 @Component
 public class BasicArithmeticProvider extends ArithmeticProvider {
@@ -29,7 +30,12 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
 
         decimalFormatE = new DecimalFormat("0.#####E0", symbols);
 
-        init();
+        try {
+            init();
+        } catch (CannotAddFunctionException e) {
+            //e.printStackTrace();
+        }
+
     }
 
     @Override
