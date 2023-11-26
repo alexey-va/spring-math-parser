@@ -63,6 +63,7 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
             result.add(new Token("+", Token.Type.OPERATOR));
             result.add(new Token("0", Token.Type.VALUE));
         }
+        System.out.println(result);
         return result;
     }
 

@@ -59,12 +59,6 @@ public class TokenManager {
                 Optional<String> fullToken = getOperatorToken(expression.getString(), i);
                 if (fullToken.isEmpty()) throw new CannotParseExpressionException("Operator " + c + " is not found!");
 
-                Token operator = new Token(fullToken.get(), Token.Type.OPERATOR);
-
-                // Check for missing value of postfix operators like factorial "!"
-                if (arithmeticProvider.isPostfixOperator(operator) && (result.isEmpty() || result.get(result.size() - 1).type == Token.Type.OPERATOR))
-                    throw new CannotParseExpressionException("No value for unary postfix operator!");
-
                 result.add(new Token(fullToken.get(), Token.Type.OPERATOR));
                 i += fullToken.get().length() - 1;
             }
@@ -126,7 +120,7 @@ public class TokenManager {
             if (result.getType() != Token.Type.VALUE)
                 throw new CannotParseExpressionException("Result is not a number! Wrong input expression");
             return result;
-        } catch (Exception e){
+        } catch (Exception e) {
             //e.printStackTrace();
             throw new CannotParseExpressionException("Operator order is incorrect!");
         }
