@@ -117,9 +117,14 @@ public class TokenManager {
         List<Token> simplifiedTokens = new ArrayList<>();
         for (Token t : subTokens) simplifiedTokens.add(t.type == Token.Type.COMPLEX ? simplifyToken(t) : t);
 
-        Token result = applyOperatorsInOrder(simplifiedTokens);
+        Token result = null;
 
-        if (result.getType() != Token.Type.VALUE)
+        // If any error is thrown - expression is invalid
+        try {
+             result = applyOperatorsInOrder(simplifiedTokens);
+        } catch (Exception ignored){}
+
+        if (result == null || (result.getType() != Token.Type.VALUE))
             throw new CannotParseExpressionException("Result is not a number! Wrong input expression");
 
         return result;
