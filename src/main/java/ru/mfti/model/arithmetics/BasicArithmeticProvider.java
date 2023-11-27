@@ -63,7 +63,7 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
             result.add(new Token("+", Token.Type.OPERATOR));
             result.add(new Token("0", Token.Type.VALUE));
         }
-        System.out.println(result);
+        //System.out.println(result);
         return result;
     }
 
@@ -109,6 +109,7 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
 
         addFunction(new BinaryOperator.Builder().name("^").aliases(Set.of("**")).priority(4).computable(args -> {
             if (args.size() != 2) throw new CannotParseExpressionException();
+            System.out.println(args.get(0)+" "+args.get(1));
             return new Token(format(Math.pow(args.get(0).toDouble(), args.get(1).toDouble())), Token.Type.VALUE);
         }).build());
 
@@ -167,7 +168,7 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
         }).build());
 
         addFunction(new ArgsFunction.Builder().name("asin").computable(args -> {
-            System.out.println("|" + args.get(0) + "| " + args.size());
+            //System.out.println("|" + args.get(0) + "| " + args.size());
             if (args.size() != 1) throw new CannotParseExpressionException();
             return new Token(format(Math.asin(args.get(0).toDouble())), Token.Type.VALUE);
         }).build());
@@ -241,14 +242,14 @@ public class BasicArithmeticProvider extends ArithmeticProvider {
     private String format(double d) {
         //System.out.println("f: "+d);
         String res;
-        if (Math.abs(d) > 1000000000) res = decimalFormatE.format(d);
+        if (Math.abs(d) > 999999999999.0 || Math.abs(d) < 0.000000000001) res = decimalFormatE.format(d);
         else res = decimalFormat.format(d);
         if (res.equals("-0")) res = "0";
         return res;
     }
 
-    private int factorial(int n) {
-        return n == 0 ? 1 : factorial(n - 1) * n;
+    private double factorial(double n) {
+        return n == 0.0 ? 1.0 : factorial(n - 1.0) * n;
     }
 
 

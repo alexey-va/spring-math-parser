@@ -31,7 +31,7 @@ public class ExpressionParserModel {
             expression = repairReducedMultiplication(expression);
 
             Token wrappedExpression = new Token(expression, Token.Type.COMPLEX);
-            System.out.println(wrappedExpression);
+            //System.out.println(wrappedExpression);
             return Optional.of(tokenManager.simplifyToken(wrappedExpression).getString());
         } catch (CannotParseExpressionException exception) {
             System.out.println(exception.getMessage());
